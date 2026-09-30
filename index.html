@@ -81,7 +81,7 @@
       background: white;
       color: #d63384;
       border: 2px solid #ff9ec4;
-      transition: left 0.2s ease, top 0.2s ease;
+      transition: left 0.25s ease, top 0.25s ease;
     }
 
     #result { display: none; }
@@ -126,18 +126,38 @@
     const no = document.getElementById('no');
     function runAway(e) {
       if (e) e.preventDefault();
+      if (no.parentElement !== document.body) {
+        // Move to <body> so it is positioned relative to the window, not the blurred card
+        const r = no.getBoundingClientRect();
+        document.body.appendChild(no);
+        no.style.position = 'fixed';
+        no.style.zIndex = 5;
+        no.style.left = r.left + 'px';
+        no.style.top = r.top + 'px';
+        no.offsetWidth; // force reflow so the first jump animates
+      }
       const pad = 16;
-      const maxX = window.innerWidth - no.offsetWidth - pad;
-      const maxY = window.innerHeight - no.offsetHeight - pad;
-      no.style.position = 'fixed';
-      no.style.zIndex = 5;
-      no.style.left = pad + Math.random() * (maxX - pad) + 'px';
-      no.style.top = pad + Math.random() * (maxY - pad) + 'px';
+      const maxX = Math.max(pad, window.innerWidth - no.offsetWidth - pad);
+      const maxY = Math.max(pad, window.innerHeight - no.offsetHeight - pad);
+      const cur = no.getBoundingClientRect();
+      let x, y, tries = 0;
+      do { // pick a spot far from where it is now
+        x = pad + Math.random() * (maxX - pad);
+        y = pad + Math.random() * (maxY - pad);
+      } while (Math.hypot(x - cur.left, y - cur.top) < 150 && ++tries < 20);
+      no.style.left = x + 'px';
+      no.style.top = y + 'px';
     }
     no.addEventListener('mouseenter', runAway);
     no.addEventListener('touchstart', runAway, { passive: false });
     no.addEventListener('click', runAway);
     no.addEventListener('focus', runAway);
+    // Dodge before the cursor even touches it
+    document.addEventListener('mousemove', (e) => {
+      const r = no.getBoundingClientRect();
+      const d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+      if (d < 90) runAway();
+    });
 
     // "Yes" shows the result
     document.getElementById('yes').addEventListener('click', () => {
